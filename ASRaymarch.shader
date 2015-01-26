@@ -35,6 +35,13 @@
 			#include "UnityCG.cginc"
 			#include "ASCommon.cginc"
 
+			sampler2D _CoordsTex;
+			sampler2D_float _CameraDepthTexture;
+		
+			// Size Coordinate Texture
+			// (width , height, Number of Horizontal samples, Number of Vertial Samples)
+			float4 _CoordTexSize;
+
 			v2f vert( appdata_img v )
 			{
 			    v2f o;
@@ -52,13 +59,13 @@
 			
 			float4 frag (v2f IN) : COLOR
 			{   
-				return float4(1,1,0,1);
+				return tex2D(_CoordsTex,float2(IN.uv.x,IN.uv.y));
 			}
 			
 			ENDCG
 		}
 
-	
+
 		Pass
 		{
 			Blend Off

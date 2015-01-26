@@ -126,16 +126,16 @@
 				float nl = x-left;
 				float nr = right-x;
 
-
 				// Fragment is a depth break
 				// fragment is then discarded to avoid writing on the Stencil
 				// the stencil is cleared to 0 thus raymarch can be performed 
 				// for all stencil fragment at 0
 				if(nl*nr == 0)
+				{
+					_DebugTex[tex2D(_CoordsTex,IN.uv)*_DebugTexSize.xy] = tex2D(_CoordsTex,IN.uv);
 					discard;
-				
-				_DebugTex[tex2D(_CoordsTex,float2(left*invSize,IN.uv.y))*_DebugTexSize.xy] = SampleDepth(x,y).xxxx;
-				
+				}
+
 				// Return the closest left and right raymarch samples	
 				return float4(nl*invSize,nr*invSize,0,0);
 			}

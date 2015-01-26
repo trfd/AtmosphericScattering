@@ -49,8 +49,6 @@ public class AtmosphericScattering : MonoBehaviour
     public RenderTexture m_raymarchTexture;
 
 	// Materials
-	public Material _debugMat;
-
 	public Material m_coordinatesMat;
 	public Material m_interpolationMat;
     public Material m_raymarchMat;
@@ -61,12 +59,14 @@ public class AtmosphericScattering : MonoBehaviour
     public Shader m_raymarchShader;
 
 	// Shader Properties
-	public int m_lightPosShaderProperty;
-	public int m_coordTexSizeShaderProperty;
-	public int m_screenSizeShaderProperty;
-	public int m_depthTextureShaderProperty;
-	public int m_raymarchStepShaderProperty;
-	public int m_depthThresholdShaderProperty;
+	private int m_lightPosShaderProperty;
+	private int m_coordTexSizeShaderProperty;
+	private int m_screenSizeShaderProperty;
+	private int m_depthTextureShaderProperty;
+	private int m_raymarchStepShaderProperty;
+	private int m_depthThresholdShaderProperty;
+    private int m_coordTexShaderProperty;
+   
 
 	// Tweaking vars
 	public float _depthThreshold = 0.1f;
@@ -80,9 +80,10 @@ public class AtmosphericScattering : MonoBehaviour
 	public int _vEpipolarLines = 16;
 
 	// Debug Buffer
-
 	public RenderTexture _debugTexture;
+    public Material _debugMat;
 	public Material _debugCam;
+    public Material _debugRaymarchMat;
 	public Material _clearMat;
 
 	void Awake()
@@ -127,6 +128,7 @@ public class AtmosphericScattering : MonoBehaviour
         m_raymarchMat      = new Material(m_raymarchShader);
 
 		_debugMat.SetTexture("_MainTex",m_coordinatesTexture);
+        _debugRaymarchMat.SetTexture("_MainTex",m_raymarchTexture);
 
 		// Shader Properties Baking
 
@@ -136,6 +138,7 @@ public class AtmosphericScattering : MonoBehaviour
 		m_depthTextureShaderProperty   = Shader.PropertyToID("_DepthEpipolarTex");
 		m_raymarchStepShaderProperty   = Shader.PropertyToID("_RaymarchStep");
 		m_depthThresholdShaderProperty = Shader.PropertyToID("_DepthThreshold");
+        m_coordTexShaderProperty       = Shader.PropertyToID("_CoordsTex");
 
 		// Debug
 
@@ -229,7 +232,7 @@ public class AtmosphericScattering : MonoBehaviour
 		m_interpolationMat.SetTexture("_DebugTex",_debugTexture);
 		m_interpolationMat.SetVector("_DebugTexSize",new Vector4(_debugTexture.width,_debugTexture.height,
 		                                                         1.0f/_debugTexture.width, 1.0f/_debugTexture.height ));
-		m_interpolationMat.SetTexture("_CoordsTex",m_coordinatesTexture);
+		m_interpolationMat.SetTexture(m_coordTexShaderProperty,m_coordinatesTexture); // Not necessary for non-debug
 
 		// Debug
 		Graphics.ClearRandomWriteTargets();
@@ -250,6 +253,12 @@ public class AtmosphericScattering : MonoBehaviour
 
     void Raymarch()
     {
+        Vector4 coordSize = new Vector4(m_interpolationTexture.width, m_interpolationTexture.height,
+                                        _hEpipolarLines, _vEpipolarLines);
+
+        m_interpolationMat.SetVector(m_coordTexSizeShaderProperty, coordSize);
+        m_raymarchMat.SetTexture(m_coordTexShaderProperty, m_coordinatesTexture);
+
         Graphics.SetRenderTarget(m_raymarchTexture.colorBuffer,m_raymarchTexture.depthBuffer);
 
         // Clear Raymarch texture pass
