@@ -76,7 +76,7 @@
 				if(x%_RaymarchStep == 0)
 				{
 					_DebugTex[tex2D(_CoordsTex,IN.uv)*_DebugTexSize.xy] = float4(1,0,1,1);
-					return float4(-1,-1,0,0);
+					return float4(0,0,0,0);
 				}
 				
 				float invSize = 1.0 / _CoordTexSize.x;
@@ -104,13 +104,15 @@
 				}
 				
 				// Normalized
-				float nl = (x-left)*invSize;
-				float nr = (x+right)*invSize;
+				float nl = x-left;
+				float nr = right-x;
+
+				if(nl*nr == 0)
+					return float4(0,0,0,0);
 				
 				_DebugTex[tex2D(_CoordsTex,float2(left*invSize,IN.uv.y))*_DebugTexSize.xy] = SampleDepth(x,y).xxxx;
-				//_DebugTex[tex2D(_CoordsTex,float2(nr,IN.uv.y))*_DebugTexSize.xy] = float4(1,1,0,1);
 								
-				return float4(nl,nr,0,0);
+				return float4(nl*invSize,nr*invSize,0,0);
 			}
 			
 			ENDCG
