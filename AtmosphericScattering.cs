@@ -46,16 +46,19 @@ public class AtmosphericScattering : MonoBehaviour
 	public RenderTexture m_coordinatesTexture;
 	public RenderTexture m_depthTexture;
 	public RenderTexture m_interpolationTexture;
+    public RenderTexture m_raymarchTexture;
 
 	// Materials
 	public Material _debugMat;
 
 	public Material m_coordinatesMat;
 	public Material m_interpolationMat;
+    public Material m_raymarchMat;
 
 	// Shader
 	public Shader m_coordinateShader;
 	public Shader m_interpolationTextureShader;
+    public Shader m_raymarchShader;
 
 	// Shader Properties
 	public int m_lightPosShaderProperty;
@@ -110,10 +113,18 @@ public class AtmosphericScattering : MonoBehaviour
 		m_interpolationTexture.filterMode = FilterMode.Point;
 		m_interpolationTexture.Create();
 
+        // Raymarch
+        m_raymarchTexture = new RenderTexture(_samplingAlongEpipolarLine, epipolarLineCount, 24,
+                                              RenderTextureFormat.ARGBFloat);
+
+        m_raymarchTexture.filterMode = FilterMode.Bilinear;
+        m_raymarchTexture.Create();
+
 		// Materials
 
-		m_coordinatesMat = new Material(m_coordinateShader);
+		m_coordinatesMat   = new Material(m_coordinateShader);
 		m_interpolationMat = new Material(m_interpolationTextureShader);
+        m_raymarchMat      = new Material(m_raymarchShader);
 
 		_debugMat.SetTexture("_MainTex",m_coordinatesTexture);
 
@@ -158,6 +169,7 @@ public class AtmosphericScattering : MonoBehaviour
 
 		RenderCoordinatesEpipolar();
 		RenderInterpolationTexture();
+        Raymarch();
 
 		Graphics.SetRenderTarget(colorBuffer,depthBuffer);
 	}
@@ -223,13 +235,31 @@ public class AtmosphericScattering : MonoBehaviour
 		Graphics.ClearRandomWriteTargets();
 		Graphics.SetRandomWriteTarget(1, _debugTexture);
 
-		Graphics.SetRenderTarget(m_interpolationTexture);
-		m_interpolationMat.SetPass(0);
+		Graphics.SetRenderTarget(m_interpolationTexture.colorBuffer,m_raymarchTexture.depthBuffer);
 
+		// Call Clear pass to clear interpolation texture
+		m_interpolationMat.SetPass(1);
+		RenderQuad();
+
+		// Generate interpolation texture
+		m_interpolationMat.SetPass(0);
 		RenderQuad();
 
 		Graphics.ClearRandomWriteTargets();
 	}
+
+    void Raymarch()
+    {
+        Graphics.SetRenderTarget(m_raymarchTexture.colorBuffer,m_raymarchTexture.depthBuffer);
+
+        // Clear Raymarch texture pass
+        // Useful only for debug
+        m_raymarchMat.SetPass(1);
+        RenderQuad();
+        
+        m_raymarchMat.SetPass(0);
+        RenderQuad();
+    }
 
 	void RenderQuad()
 	{

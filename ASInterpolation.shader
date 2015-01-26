@@ -1,12 +1,32 @@
 ﻿Shader "AtmosphericScattering/Interpolation Texture" 
 {
+
+	CGINCLUDE
+
+	struct v2f 
+	{
+	    float4 pos : SV_POSITION;
+	    float2 uv : TEXCOORD0;
+	};
+
+	ENDCG
+
 	SubShader 
 	{
 		Tags { "RenderType"="Opaque" }
-   		ZTest Always Cull Off ZWrite Off Fog { Mode Off }
-   		
+   		Cull Off ZWrite Off Fog { Mode Off }
+   	
 		Pass
 		{
+			Blend Off
+
+			Stencil
+			{
+				Ref 1
+				Comp always
+				Pass replace
+			}
+	
 			CGPROGRAM
 			
 			#pragma target 5.0
@@ -38,13 +58,7 @@
 			
 			RWTexture2D<float4> _DebugTex;
 			float4 _DebugTexSize;
-			
-			struct v2f 
-			{
-			    float4 pos : SV_POSITION;
-			    float2 uv : TEXCOORD0;
-			};
-
+	
 			// End Debug
 
 
@@ -73,10 +87,15 @@
 				int x = floor(IN.uv.x * _CoordTexSize.x);
 				int y = IN.uv.y * _CoordTexSize.y;
 				 
+				// Fragment is a raymarch sample 
+				// fragment is then discarded to avoid writing on the Stencil
+				// the stencil is cleared to 0 thus raymarch can be performed 
+				// for all stencil fragment at 0
+
 				if(x%_RaymarchStep == 0)
 				{
 					_DebugTex[tex2D(_CoordsTex,IN.uv)*_DebugTexSize.xy] = float4(1,0,1,1);
-					return float4(0,0,0,0);
+					discard;
 				}
 				
 				float invSize = 1.0 / _CoordTexSize.x;
@@ -107,15 +126,61 @@
 				float nl = x-left;
 				float nr = right-x;
 
+
+				// Fragment is a depth break
+				// fragment is then discarded to avoid writing on the Stencil
+				// the stencil is cleared to 0 thus raymarch can be performed 
+				// for all stencil fragment at 0
 				if(nl*nr == 0)
-					return float4(0,0,0,0);
+					discard;
 				
 				_DebugTex[tex2D(_CoordsTex,float2(left*invSize,IN.uv.y))*_DebugTexSize.xy] = SampleDepth(x,y).xxxx;
-								
+				
+				// Return the closest left and right raymarch samples	
 				return float4(nl*invSize,nr*invSize,0,0);
 			}
 			
 			ENDCG
+		}
+
+
+		// Clear pass 
+		// Clears the stencil buffer and the texture
+		Pass
+		{
+			Blend Off
+
+			Stencil
+			{
+				Ref 0
+				Comp always
+				Pass replace
+			}
+
+			CGPROGRAM
+			
+			#pragma target 2.0
+			#pragma vertex vert
+			#pragma fragment frag
+
+			#include "UnityCG.cginc"
+			#include "ASCommon.cginc"
+
+			v2f vert( appdata_img v )
+			{
+			    v2f o;
+			    o.pos = v.vertex;
+			    o.uv =  v.texcoord;
+			    return o;
+			}  
+
+			float4 frag (v2f IN) : COLOR
+			{
+				return 0;
+			}
+
+			ENDCG
+
 		}
 	} 
 }
